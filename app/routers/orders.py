@@ -1,4 +1,5 @@
-from decimal import Decimal, ROUND_HALF_UP
+import decimal
+from decimal import Decimal
 from typing import List
 
 from fastapi import APIRouter, HTTPException, Response, status
@@ -29,7 +30,7 @@ def _build_order(order_id: int, payload: OrderCreate) -> Order:
             )
         total += Decimal(str(product.price)) * item.quantity
 
-    rounded_total = total.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    rounded_total = total.quantize(Decimal("0.01"), rounding=decimal.ROUND_HALF_UP)
     return Order(id=order_id, total=float(rounded_total), **payload.model_dump())
 
 

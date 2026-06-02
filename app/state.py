@@ -1,10 +1,10 @@
 from threading import RLock
-from typing import Dict
+from typing import Dict, Set
 
 from app.models import Order, Product, User
 
 users_db: Dict[int, User] = {}
-user_email_index: set[str] = set()
+user_email_index: Set[str] = set()
 products_db: Dict[int, Product] = {}
 orders_db: Dict[int, Order] = {}
 
