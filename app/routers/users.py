@@ -3,7 +3,7 @@ from typing import List
 from fastapi import APIRouter, HTTPException, Response, status
 
 from app.models import User, UserCreate
-from app.state import get_next_user_id, state_lock, users_db
+from app.state import get_next_user_id, state_lock, user_email_index, users_db
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -21,11 +21,12 @@ router = APIRouter(prefix="/users", tags=["Users"])
 )
 def create_user(payload: UserCreate) -> User:
     with state_lock:
-        if any(user.email == payload.email for user in users_db.values()):
+        if payload.email in user_email_index:
             raise HTTPException(status_code=400, detail="Email already exists")
 
         user = User(id=get_next_user_id(), **payload.model_dump())
         users_db[user.id] = user
+        user_email_index.add(user.email)
     return user
 
 
@@ -58,14 +59,22 @@ def get_user(user_id: int) -> User:
     response_model=User,
     summary="Update user",
     description="Replace a user by ID.",
-    responses={404: {"description": "User not found"}},
+    responses={
+        400: {"description": "Email already exists"},
+        404: {"description": "User not found"},
+    },
 )
 def update_user(user_id: int, payload: UserCreate) -> User:
     with state_lock:
         if user_id not in users_db:
             raise HTTPException(status_code=404, detail="User not found")
+        existing_user = users_db[user_id]
+        if payload.email != existing_user.email and payload.email in user_email_index:
+            raise HTTPException(status_code=400, detail="Email already exists")
+        user_email_index.discard(existing_user.email)
         user = User(id=user_id, **payload.model_dump())
         users_db[user_id] = user
+        user_email_index.add(user.email)
     return user
 
 
@@ -80,5 +89,6 @@ def delete_user(user_id: int) -> Response:
     with state_lock:
         if user_id not in users_db:
             raise HTTPException(status_code=404, detail="User not found")
-        users_db.pop(user_id)
+        deleted_user = users_db.pop(user_id)
+        user_email_index.discard(deleted_user.email)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -104,6 +104,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/User'
+        '400':
+          description: Email already exists
         '404':
           description: User not found
         '422':

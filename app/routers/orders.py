@@ -1,3 +1,4 @@
+from decimal import Decimal, ROUND_HALF_UP
 from typing import List
 
 from fastapi import APIRouter, HTTPException, Response, status
@@ -18,7 +19,7 @@ def _build_order(order_id: int, payload: OrderCreate) -> Order:
     if payload.user_id not in users_db:
         raise HTTPException(status_code=404, detail="User not found")
 
-    total = 0.0
+    total = Decimal("0.00")
     for item in payload.items:
         product = products_db.get(item.product_id)
         if not product:
@@ -26,9 +27,10 @@ def _build_order(order_id: int, payload: OrderCreate) -> Order:
                 status_code=404,
                 detail=f"Product {item.product_id} not found",
             )
-        total += product.price * item.quantity
+        total += Decimal(str(product.price)) * item.quantity
 
-    return Order(id=order_id, total=round(total, 2), **payload.model_dump())
+    rounded_total = total.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    return Order(id=order_id, total=float(rounded_total), **payload.model_dump())
 
 
 @router.post(
