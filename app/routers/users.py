@@ -1,13 +1,11 @@
-from typing import Dict, List
+from typing import List
 
 from fastapi import APIRouter, HTTPException, Response, status
 
 from app.models import User, UserCreate
+from app.state import get_next_user_id, state_lock, users_db
 
 router = APIRouter(prefix="/users", tags=["Users"])
-
-users_db: Dict[int, User] = {}
-_next_user_id = 1
 
 
 @router.post(
@@ -22,14 +20,12 @@ _next_user_id = 1
     },
 )
 def create_user(payload: UserCreate) -> User:
-    global _next_user_id
+    with state_lock:
+        if any(user.email == payload.email for user in users_db.values()):
+            raise HTTPException(status_code=400, detail="Email already exists")
 
-    if any(user.email == payload.email for user in users_db.values()):
-        raise HTTPException(status_code=400, detail="Email already exists")
-
-    user = User(id=_next_user_id, **payload.model_dump())
-    users_db[user.id] = user
-    _next_user_id += 1
+        user = User(id=get_next_user_id(), **payload.model_dump())
+        users_db[user.id] = user
     return user
 
 
@@ -65,10 +61,11 @@ def get_user(user_id: int) -> User:
     responses={404: {"description": "User not found"}},
 )
 def update_user(user_id: int, payload: UserCreate) -> User:
-    if user_id not in users_db:
-        raise HTTPException(status_code=404, detail="User not found")
-    user = User(id=user_id, **payload.model_dump())
-    users_db[user_id] = user
+    with state_lock:
+        if user_id not in users_db:
+            raise HTTPException(status_code=404, detail="User not found")
+        user = User(id=user_id, **payload.model_dump())
+        users_db[user_id] = user
     return user
 
 
@@ -80,7 +77,8 @@ def update_user(user_id: int, payload: UserCreate) -> User:
     responses={404: {"description": "User not found"}},
 )
 def delete_user(user_id: int) -> Response:
-    if user_id not in users_db:
-        raise HTTPException(status_code=404, detail="User not found")
-    users_db.pop(user_id)
+    with state_lock:
+        if user_id not in users_db:
+            raise HTTPException(status_code=404, detail="User not found")
+        users_db.pop(user_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

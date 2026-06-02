@@ -1,15 +1,17 @@
-from typing import Dict, List
+from typing import List
 
 from fastapi import APIRouter, HTTPException, Response, status
 
 from app.models import Order, OrderCreate
-from app.routers.products import products_db
-from app.routers.users import users_db
+from app.state import (
+    get_next_order_id,
+    orders_db,
+    products_db,
+    state_lock,
+    users_db,
+)
 
 router = APIRouter(prefix="/orders", tags=["Orders"])
-
-orders_db: Dict[int, Order] = {}
-_next_order_id = 1
 
 
 def _build_order(order_id: int, payload: OrderCreate) -> Order:
@@ -41,10 +43,9 @@ def _build_order(order_id: int, payload: OrderCreate) -> Order:
     },
 )
 def create_order(payload: OrderCreate) -> Order:
-    global _next_order_id
-    order = _build_order(_next_order_id, payload)
-    orders_db[order.id] = order
-    _next_order_id += 1
+    with state_lock:
+        order = _build_order(get_next_order_id(), payload)
+        orders_db[order.id] = order
     return order
 
 
@@ -80,10 +81,11 @@ def get_order(order_id: int) -> Order:
     responses={404: {"description": "Order, user, or product not found"}},
 )
 def update_order(order_id: int, payload: OrderCreate) -> Order:
-    if order_id not in orders_db:
-        raise HTTPException(status_code=404, detail="Order not found")
-    order = _build_order(order_id, payload)
-    orders_db[order_id] = order
+    with state_lock:
+        if order_id not in orders_db:
+            raise HTTPException(status_code=404, detail="Order not found")
+        order = _build_order(order_id, payload)
+        orders_db[order_id] = order
     return order
 
 
@@ -95,7 +97,8 @@ def update_order(order_id: int, payload: OrderCreate) -> Order:
     responses={404: {"description": "Order not found"}},
 )
 def delete_order(order_id: int) -> Response:
-    if order_id not in orders_db:
-        raise HTTPException(status_code=404, detail="Order not found")
-    orders_db.pop(order_id)
+    with state_lock:
+        if order_id not in orders_db:
+            raise HTTPException(status_code=404, detail="Order not found")
+        orders_db.pop(order_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
