@@ -5,12 +5,12 @@ info:
     endpoints for users, products, and orders.
   version: 0.1.0
 paths:
-  /users/:
+  /users:
     get:
       tags:
       - Users
       summary: List users
-      description: Return all users.
+      description: Return all users. Testing update.
       operationId: list_users_users__get
       responses:
         '200':
