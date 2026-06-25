@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  title: Discovery Redocly - Python API
+  title: Discovery Redocly - Python API V3.0
   description: Sample API for OpenAPI and Redocly experimentation. Includes CRUD-style
     endpoints for users, products, and orders.
   version: 0.1.0
