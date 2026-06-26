@@ -24,9 +24,18 @@ app = FastAPI(
             "name": "Orders",
             "description": "Operations related to order lifecycle and totals.",
         },
+        {
+            "name": "Health",
+            "description": "Health check endpoint.",
+        },
     ],
 )
 
 app.include_router(users_router)
 app.include_router(products_router)
 app.include_router(orders_router)
+
+
+@app.get("/hello", tags=["Health"], summary="Hello endpoint")
+def hello():
+    return {"message": "hola"}
