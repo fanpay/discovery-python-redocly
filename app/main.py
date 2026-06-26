@@ -36,6 +36,6 @@ app.include_router(products_router)
 app.include_router(orders_router)
 
 
-@app.get("/hello", tags=["Health"], summary="Hello endpoint")
+@app.get("/health", tags=["Health"], summary="Hello endpoint")
 def hello():
     return {"message": "hola"}
