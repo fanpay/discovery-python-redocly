@@ -46,7 +46,7 @@ jobs:
           redocly push docs/openapi.yaml \
             --organization ${{ vars.REDOCLY_ORGANIZATION }} \
             --project ${{ vars.REDOCLY_PROJECT }} \
-            --mount-path /apis/discovery-python/@test-push/discovery-python-redocly-openapi.yaml \
+            --mount-path /apis/discovery-python/@test-push \
             --branch ${{ github.ref_name }} \
             --author "${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>" \
             --message "${{ github.event.head_commit.message }}" \
