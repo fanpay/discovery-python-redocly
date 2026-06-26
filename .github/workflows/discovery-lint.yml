@@ -1,0 +1,22 @@
+name: Validate discovery OpenAPI description
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up node
+        uses: actions/setup-node@v4
+      - name: Install Redocly CLI
+        run: npm install -g @redocly/cli@latest
+      - name: Run linting
+        run: redocly lint --format=github-actions
+      - name: Upload linting results
+        uses: actions/upload-artifact@v3
+        with:
+          name: discovery-lint-results
+      - name: Push documentation to Redocly
+        run: redocly push --branch ${{ github.ref_name }} --force
