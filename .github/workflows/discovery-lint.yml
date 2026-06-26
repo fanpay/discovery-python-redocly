@@ -1,22 +1,54 @@
-name: Validate discovery OpenAPI description
+name: Validate and push discovery OpenAPI description
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - main
+      - 'release/**'
+  pull_request:
 
 jobs:
-  build:
+  lint:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Set up node
+      - name: Set up Node
         uses: actions/setup-node@v4
       - name: Install Redocly CLI
         run: npm install -g @redocly/cli@latest
       - name: Run linting
-        run: redocly lint --format=github-actions
-      - name: Upload linting results
-        uses: actions/upload-artifact@v3
+        run: redocly lint --format=github-actions --extends=minimal
+
+  push-docs:
+    runs-on: ubuntu-latest
+    needs: lint
+    if: github.event_name == 'push'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          name: discovery-lint-results
+          python-version: '3.12'
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+      - name: Generate OpenAPI spec
+        run: python scripts/export_openapi.py
+      - name: Set up Node
+        uses: actions/setup-node@v4
+      - name: Install Redocly CLI
+        run: npm install -g @redocly/cli@latest
       - name: Push documentation to Redocly
-        run: redocly push --branch ${{ github.ref_name }} --force
+        env:
+          REDOCLY_AUTHORIZATION: ${{ secrets.REDOCLY_AUTHORIZATION }}
+        run: |
+          redocly push docs/openapi.yaml \
+            --organization ${{ vars.REDOCLY_ORGANIZATION }} \
+            --project ${{ vars.REDOCLY_PROJECT }} \
+            --mount-path /apis/discovery-python/@test-push/discovery-python-redocly-openapi.yaml \
+            --branch ${{ github.ref_name }} \
+            --author "${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>" \
+            --message "${{ github.event.head_commit.message }}" \
+            --commit-sha ${{ github.sha }} \
+            --commit-url ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
