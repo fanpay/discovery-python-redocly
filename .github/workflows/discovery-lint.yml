@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - 'release/**'
   pull_request:
 
 jobs:
@@ -46,7 +45,7 @@ jobs:
           redocly push docs/openapi.yaml \
             --organization ${{ vars.REDOCLY_ORGANIZATION }} \
             --project ${{ vars.REDOCLY_PROJECT }} \
-            --mount-path /apis/discovery-python/@test-push \
+            --mount-path /apis/discovery-python/@latest \
             --branch ${{ github.ref_name }} \
             --author "${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>" \
             --message "${{ github.event.head_commit.message }}" \
